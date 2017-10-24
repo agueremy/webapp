@@ -33,16 +33,21 @@ data "aws_ami" "ubuntu" {
   owners = ["099720109477"] # Canonical
 }
 
+data "aws_subnet_ids" "all" {
+  vpc_id = "${data.terraform_remote_state.core.vpc_core_id}"
+}
+
 resource "aws_instance" "webapp" {
+  count = 2
   ami           = "${data.aws_ami.ubuntu.id}"
   instance_type = "t2.micro"
-  subnet_id = "${data.terraform_remote_state.core.subnet_pub_id}"
+  subnet_id = "${element(data.aws_subnet_ids.all.ids, count.index)}"
   associate_public_ip_address = true
   key_name = "key-arnaud"
   user_data = "${data.template_file.Website.rendered}"
   vpc_security_group_ids = ["${aws_security_group.sgWebApp.id}"]
   tags {
-    Name = "Appli AGU"
+    Name = "Appli AGU ${count.index}"
   }
 }
 
