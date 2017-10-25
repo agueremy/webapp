@@ -51,6 +51,26 @@ resource "aws_instance" "webapp" {
   }
 }
 
+resource "aws_elb" "webapp"{
+  name = "webapp"
+  subnets = ["${data.aws_subnet_ids.all.ids}"]
+  security_groups = ["${aws_security_group.sgWebApp.id}"]
+  
+  listener{
+    instance_port = 80
+    instance_protocol = "http"
+    lb_port = 80
+    lb_protocol = "http"
+  }
+  health_check{
+    healthy_threshold = 2
+    unhealthy_threshold = 2
+    timeout = 2
+    target = "HTTP:80/"
+    interval = 5
+  }
+}
+
 data "template_file" "Website"{
   template = "${file("${path.module}/user-data.tpl")}"
   vars{
@@ -88,3 +108,8 @@ resource "aws_security_group" "sgWebApp" {
   }
 }
 
+resource "aws_elb_attachment" "webapp" {
+  count = 2
+  elb      = "${aws_elb.webapp.id}"
+  instance = "${element(aws_instance.webapp.*.id, count.index)}"
+}
